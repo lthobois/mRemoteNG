@@ -19,6 +19,7 @@ namespace mRemoteNG.Connection
         public ConnectionInfo OriginalInfo { get; set; }
         // in case the connection is through a SSH tunnel the Info of the SSHTunnelConnection is also saved for reference in log messages etc.
         public ConnectionInfo SSHTunnelInfo { get; set; }
+        public bool SuppressCloseNotifications { get; set; }
 
 
         public InterfaceControl(Control parent, ProtocolBase protocol, ConnectionInfo info)

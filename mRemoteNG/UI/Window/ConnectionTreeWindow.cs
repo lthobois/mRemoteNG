@@ -94,7 +94,7 @@ namespace mRemoteNG.UI.Window
             mMenSort.ToolTipText = Language.Sort;
             mMenFavorites.ToolTipText = Language.Favorites;
 
-            txtSearch.Text = Language.SearchPrompt;
+            txtSearch.Text = string.Empty;
         }
 
         private new void ApplyTheme()
@@ -300,7 +300,7 @@ namespace mRemoteNG.UI.Window
 
         private void ApplyFiltering()
         {
-            if (txtSearch.Text == "" || txtSearch.Text == Language.SearchPrompt)
+            if (string.IsNullOrEmpty(txtSearch.Text))
             {
                 ConnectionTree.RemoveFilter();
                 return;

@@ -702,7 +702,7 @@ namespace mRemoteNG.UI.Forms
                 return;
             }
 
-            StringBuilder titleBuilder = new(Application.ProductName);
+            StringBuilder titleBuilder = new("mRemoteNG");
             const string separator = " - ";
 
             if (Runtime.ConnectionsService.IsConnectionsFileLoaded)
@@ -717,7 +717,7 @@ namespace mRemoteNG.UI.Forms
                     if (!string.IsNullOrEmpty(Runtime.ConnectionsService.ConnectionFileName))
                     {
                         titleBuilder.Append(separator);
-                        titleBuilder.Append(Properties.OptionsAppearancePage.Default.ShowCompleteConsPathInTitle ? Runtime.ConnectionsService.ConnectionFileName : Path.GetFileName(Runtime.ConnectionsService.ConnectionFileName));
+                        titleBuilder.Append(BuildConnectionsFileTitle(Runtime.ConnectionsService.ConnectionFileName));
                     }
                 }
             }
@@ -732,6 +732,20 @@ namespace mRemoteNG.UI.Forms
             }
 
             Text = titleBuilder.ToString();
+        }
+
+        private static string BuildConnectionsFileTitle(string connectionFileName)
+        {
+            string fileName = Path.GetFileName(connectionFileName);
+            string directoryName = Path.GetDirectoryName(connectionFileName);
+
+            if (string.IsNullOrEmpty(fileName))
+                return connectionFileName;
+
+            if (string.IsNullOrEmpty(directoryName))
+                return fileName;
+
+            return $"{fileName} ({directoryName})";
         }
 
         public void ShowHidePanelTabs(DockContent closingDocument = null)

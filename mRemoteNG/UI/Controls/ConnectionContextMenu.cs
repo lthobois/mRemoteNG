@@ -29,6 +29,7 @@ namespace mRemoteNG.UI.Controls
         private ToolStripMenuItem _cMenTreeAddConnection;
         private ToolStripMenuItem _cMenTreeAddFolder;
         private ToolStripSeparator _cMenTreeSep1;
+        private ToolStripMenuItem _cMenTreeConnectSelected;
         private ToolStripMenuItem _cMenTreeConnect;
         private ToolStripMenuItem _cMenTreeConnectWithOptions;
         private ToolStripMenuItem _cMenTreeConnectWithOptionsConnectToConsoleSession;
@@ -63,6 +64,7 @@ namespace mRemoteNG.UI.Controls
         private ToolStripMenuItem _cMenTreeImportPutty;
         private ToolStripMenuItem _cMenTreeApplyInheritanceToChildren;
         private ToolStripMenuItem _cMenTreeApplyDefaultInheritance;
+        private ToolStripMenuItem _cMenTreeApplyDefaultInheritanceToSubtree;
         private readonly ConnectionTree.ConnectionTree _connectionTree;
 
 
@@ -88,6 +90,7 @@ namespace mRemoteNG.UI.Controls
         private void InitializeComponent()
         {
             _cMenTreeConnect = new ToolStripMenuItem();
+            _cMenTreeConnectSelected = new ToolStripMenuItem();
             _cMenTreeConnectWithOptions = new ToolStripMenuItem();
             _cMenTreeConnectWithOptionsConnectToConsoleSession = new ToolStripMenuItem();
             _cMenTreeConnectWithOptionsDontConnectToConsoleSession = new ToolStripMenuItem();
@@ -114,6 +117,7 @@ namespace mRemoteNG.UI.Controls
             _cMenInheritanceSubMenu = new ToolStripMenuItem();
             _cMenTreeApplyInheritanceToChildren = new ToolStripMenuItem();
             _cMenTreeApplyDefaultInheritance = new ToolStripMenuItem();
+            _cMenTreeApplyDefaultInheritanceToSubtree = new ToolStripMenuItem();
             _cMenTreeExportFile = new ToolStripMenuItem();
             _cMenTreeSep4 = new ToolStripSeparator();
             _cMenTreeAddConnection = new ToolStripMenuItem();
@@ -133,6 +137,7 @@ namespace mRemoteNG.UI.Controls
                                            System.Drawing.GraphicsUnit.Point, 0);
             Items.AddRange(new ToolStripItem[]
             {
+                _cMenTreeConnectSelected,
                 _cMenTreeConnect,
                 _cMenTreeConnectWithOptions,
                 _cMenTreeDisconnect,
@@ -159,6 +164,15 @@ namespace mRemoteNG.UI.Controls
             Name = "cMenTree";
             RenderMode = ToolStripRenderMode.Professional;
             Size = new System.Drawing.Size(200, 364);
+            //
+            // cMenTreeConnect
+            //
+            _cMenTreeConnectSelected.Image = Properties.Resources.Run_16x;
+            _cMenTreeConnectSelected.Name = "_cMenTreeConnectSelected";
+            _cMenTreeConnectSelected.Size = new System.Drawing.Size(199, 22);
+            _cMenTreeConnectSelected.Text = "Launch selected connections";
+            _cMenTreeConnectSelected.Visible = false;
+            _cMenTreeConnectSelected.Click += OnConnectClicked;
             //
             // cMenTreeConnect
             //
@@ -432,7 +446,8 @@ namespace mRemoteNG.UI.Controls
             _cMenInheritanceSubMenu.DropDownItems.AddRange(new ToolStripItem[]
             {
                 _cMenTreeApplyInheritanceToChildren,
-                _cMenTreeApplyDefaultInheritance
+                _cMenTreeApplyDefaultInheritance,
+                _cMenTreeApplyDefaultInheritanceToSubtree
             });
             _cMenInheritanceSubMenu.Name = "_cMenInheritanceSubMenu";
             _cMenInheritanceSubMenu.Size = new System.Drawing.Size(199, 22);
@@ -451,11 +466,19 @@ namespace mRemoteNG.UI.Controls
             _cMenTreeApplyDefaultInheritance.Size = new System.Drawing.Size(199, 22);
             _cMenTreeApplyDefaultInheritance.Text = "Apply default inheritance";
             _cMenTreeApplyDefaultInheritance.Click += OnApplyDefaultInheritanceClicked;
+            //
+            // _cMenTreeApplyDefaultInheritanceToSubtree
+            //
+            _cMenTreeApplyDefaultInheritanceToSubtree.Name = "_cMenTreeApplyDefaultInheritanceToSubtree";
+            _cMenTreeApplyDefaultInheritanceToSubtree.Size = new System.Drawing.Size(199, 22);
+            _cMenTreeApplyDefaultInheritanceToSubtree.Text = "Reset subtree to default inheritance";
+            _cMenTreeApplyDefaultInheritanceToSubtree.Click += OnApplyDefaultInheritanceToSubtreeClicked;
         }
 
 
         private void ApplyLanguage()
         {
+            _cMenTreeConnectSelected.Text = "Lancer les connexions";
             _cMenTreeConnect.Text = Language.Connect;
             _cMenTreeConnectWithOptions.Text = Language.ConnectWithOptions;
             _cMenTreeConnectWithOptionsConnectToConsoleSession.Text = Language.ConnectToConsoleSession;
@@ -492,6 +515,7 @@ namespace mRemoteNG.UI.Controls
             _cMenInheritanceSubMenu.Text = Language.Inheritance;
             _cMenTreeApplyInheritanceToChildren.Text = Language.ApplyInheritanceToChildren;
             _cMenTreeApplyDefaultInheritance.Text = Language.ApplyDefaultInheritance;
+            _cMenTreeApplyDefaultInheritanceToSubtree.Text = "Reset subtree to default inheritance";
         }
 
         internal void ShowHideMenuItems()
@@ -500,6 +524,10 @@ namespace mRemoteNG.UI.Controls
             {
                 Enabled = true;
                 EnableMenuItemsRecursive(Items);
+                bool multipleNodesSelected = _connectionTree.SelectedNodes.Count > 1;
+                _cMenTreeConnectSelected.Visible = multipleNodesSelected;
+                _cMenTreeConnect.Visible = !multipleNodesSelected;
+
                 if (_connectionTree.SelectedNode is RootPuttySessionsNodeInfo)
                 {
                     ShowHideMenuItemsForRootPuttyNode();
@@ -553,6 +581,7 @@ namespace mRemoteNG.UI.Controls
             _cMenTreeConnectWithOptionsViewOnly.Enabled = false;
             _cMenTreeApplyInheritanceToChildren.Enabled = false;
             _cMenTreeApplyDefaultInheritance.Enabled = false;
+            _cMenTreeApplyDefaultInheritanceToSubtree.Enabled = false;
             _cMenTreeCopyHostname.Enabled = false;
         }
 
@@ -573,6 +602,7 @@ namespace mRemoteNG.UI.Controls
             _cMenTreeConnectWithOptionsViewOnly.Enabled = false;
             _cMenTreeApplyInheritanceToChildren.Enabled = false;
             _cMenTreeApplyDefaultInheritance.Enabled = false;
+            _cMenTreeApplyDefaultInheritanceToSubtree.Enabled = false;
         }
 
         internal void ShowHideMenuItemsForContainer(ContainerInfo containerInfo)
@@ -585,6 +615,7 @@ namespace mRemoteNG.UI.Controls
 
             _cMenTreeToolsTransferFile.Enabled = false;
             _cMenTreeConnectWithOptionsViewOnly.Enabled = false;
+            _cMenTreeApplyDefaultInheritanceToSubtree.Enabled = true;
         }
 
         internal void ShowHideMenuItemsForPuttyNode(PuttySessionInfo connectionInfo)
@@ -611,6 +642,7 @@ namespace mRemoteNG.UI.Controls
             _cMenTreeConnectWithOptionsViewOnly.Enabled = false;
             _cMenTreeApplyInheritanceToChildren.Enabled = false;
             _cMenTreeApplyDefaultInheritance.Enabled = false;
+            _cMenTreeApplyDefaultInheritanceToSubtree.Enabled = false;
         }
 
         internal void ShowHideMenuItemsForConnectionNode(ConnectionInfo connectionInfo)
@@ -634,6 +666,7 @@ namespace mRemoteNG.UI.Controls
                 _cMenTreeConnectWithOptionsViewOnly.Enabled = false;
 
             _cMenTreeApplyInheritanceToChildren.Enabled = false;
+            _cMenTreeApplyDefaultInheritanceToSubtree.Enabled = false;
         }
 
         internal void DisableShortcutKeys()
@@ -975,6 +1008,14 @@ namespace mRemoteNG.UI.Controls
                 return;
 
             DefaultConnectionInheritance.Instance.SaveTo(_connectionTree.SelectedNode.Inheritance);
+        }
+
+        private void OnApplyDefaultInheritanceToSubtreeClicked(object sender, EventArgs e)
+        {
+            if (_connectionTree.SelectedNode is not ContainerInfo container)
+                return;
+
+            container.ApplyDefaultInheritanceToSubtree();
         }
 
         #endregion

@@ -11,6 +11,7 @@ using mRemoteNG.UI.Forms;
 using mRemoteNG.UI.Tabs;
 using MSTSCLib;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -39,12 +40,18 @@ namespace mRemoteNG.Connection.Protocol.RDP
         private readonly DisplayProperties _displayProperties;
         protected readonly FrmMain _frmMain = FrmMain.Default;
         protected bool loginComplete;
+        private readonly Stopwatch _connectionAttemptStopwatch = new();
         private bool _redirectKeys;
         private bool _alertOnIdleDisconnect;
+        private bool _closeRequested;
+        private bool _pendingRapidReconnect;
         protected uint DesktopScaleFactor => (uint)(_displayProperties.ResolutionScalingFactor.Width * 100);
         protected readonly uint DeviceScaleFactor = 100;
         protected readonly uint Orientation = 0;
         private AxHost AxHost => (AxHost)Control;
+        private const int RapidDisconnectRetryWindowMs = 500;
+        private const int MaxRapidDisconnectRetries = 5;
+        private static readonly ConcurrentDictionary<string, int> RapidDisconnectRetryCounts = new();
 
 
         #region Properties
@@ -201,25 +208,16 @@ namespace mRemoteNG.Connection.Protocol.RDP
         public override bool Connect()
         {
             loginComplete = false;
+            _closeRequested = false;
+            _pendingRapidReconnect = false;
             SetEventHandlers();
-
-            try
-            {
-                _rdpClient.Connect();
-                base.Connect();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Runtime.MessageCollector.AddExceptionStackTrace(Language.ConnectionOpenFailed, ex);
-            }
-
-            return false;
+            return TryConnectClient(isRetry: false);
         }
 
         public override void Disconnect()
         {
+            _closeRequested = true;
+            _connectionAttemptStopwatch.Reset();
             try
             {
                 _rdpClient.Disconnect();
@@ -229,6 +227,17 @@ namespace mRemoteNG.Connection.Protocol.RDP
                 Runtime.MessageCollector.AddExceptionStackTrace(Language.RdpDisconnectFailed, ex);
                 Close();
             }
+        }
+
+        public override void Close()
+        {
+            _closeRequested = true;
+            _connectionAttemptStopwatch.Reset();
+            if (!_pendingRapidReconnect)
+            {
+                ResetRapidDisconnectRetryCount();
+            }
+            base.Close();
         }
 
         public void ToggleFullscreen()
@@ -906,6 +915,15 @@ namespace mRemoteNG.Connection.Protocol.RDP
 
         private void RDPEvent_OnDisconnected(int discReason)
         {
+            if (ShouldRetryRapidDisconnect())
+            {
+                ScheduleRapidReconnect();
+                return;
+            }
+
+            _connectionAttemptStopwatch.Reset();
+            ResetRapidDisconnectRetryCount();
+
             const int UI_ERR_NORMAL_DISCONNECT = 0xB08;
             if (discReason != UI_ERR_NORMAL_DISCONNECT)
             {
@@ -942,6 +960,8 @@ namespace mRemoteNG.Connection.Protocol.RDP
         private void RDPEvent_OnLoginComplete()
         {
             loginComplete = true;
+            _connectionAttemptStopwatch.Reset();
+            ResetRapidDisconnectRetryCount();
         }
 
         private void RDPEvent_OnLeaveFullscreenMode()
@@ -953,6 +973,116 @@ namespace mRemoteNG.Connection.Protocol.RDP
         private void RdpClient_GotFocus(object sender, EventArgs e)
         {
             ((ConnectionTab)Control.Parent.Parent).Focus();
+        }
+
+        private bool TryConnectClient(bool isRetry)
+        {
+            StartConnectionAttempt();
+
+            try
+            {
+                _rdpClient.Connect();
+
+                if (!isRetry)
+                {
+                    base.Connect();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Runtime.MessageCollector.AddExceptionStackTrace(Language.ConnectionOpenFailed, ex);
+                return false;
+            }
+        }
+
+        private void StartConnectionAttempt()
+        {
+            loginComplete = false;
+            _closeRequested = false;
+            _connectionAttemptStopwatch.Restart();
+        }
+
+        private bool ShouldRetryRapidDisconnect()
+        {
+            return !_closeRequested
+                   && !loginComplete
+                   && _connectionAttemptStopwatch.IsRunning
+                   && _connectionAttemptStopwatch.ElapsedMilliseconds < RapidDisconnectRetryWindowMs
+                   && GetRapidDisconnectRetryCount() < MaxRapidDisconnectRetries;
+        }
+
+        private void ScheduleRapidReconnect()
+        {
+            int retryCount = IncrementRapidDisconnectRetryCount();
+            long elapsedMs = _connectionAttemptStopwatch.ElapsedMilliseconds;
+            Runtime.MessageCollector.AddMessage(
+                MessageClass.WarningMsg,
+                $"RDP connection to '{connectionInfo.Name}' closed after {elapsedMs} ms. Retrying {retryCount}/{MaxRapidDisconnectRetries}.");
+
+            if (Control == null || Control.IsDisposed)
+            {
+                Close();
+                return;
+            }
+
+            Control.BeginInvoke(new Action(() =>
+            {
+                if (_closeRequested || Control == null || Control.IsDisposed)
+                {
+                    return;
+                }
+
+                ConnectionInfo retryConnectionInfo = InterfaceControl?.OriginalInfo ?? connectionInfo;
+                if (retryConnectionInfo == null)
+                {
+                    Close();
+                    return;
+                }
+
+                _pendingRapidReconnect = true;
+                if (InterfaceControl != null)
+                {
+                    InterfaceControl.SuppressCloseNotifications = true;
+                }
+
+                Close();
+                Runtime.ConnectionInitiator.OpenConnection(retryConnectionInfo, Force | ConnectionInfo.Force.DoNotJump);
+            }));
+        }
+
+        private string GetRapidDisconnectRetryKey()
+        {
+            return InterfaceControl?.OriginalInfo?.ConstantID
+                   ?? InterfaceControl?.Info?.ConstantID
+                   ?? connectionInfo?.ConstantID
+                   ?? string.Empty;
+        }
+
+        private int GetRapidDisconnectRetryCount()
+        {
+            string key = GetRapidDisconnectRetryKey();
+            return string.IsNullOrEmpty(key)
+                ? 0
+                : RapidDisconnectRetryCounts.TryGetValue(key, out int count) ? count : 0;
+        }
+
+        private int IncrementRapidDisconnectRetryCount()
+        {
+            string key = GetRapidDisconnectRetryKey();
+            return string.IsNullOrEmpty(key)
+                ? 1
+                : RapidDisconnectRetryCounts.AddOrUpdate(key, 1, (_, current) => current + 1);
+        }
+
+        private void ResetRapidDisconnectRetryCount()
+        {
+            string key = GetRapidDisconnectRetryKey();
+            if (!string.IsNullOrEmpty(key))
+            {
+                RapidDisconnectRetryCounts.TryRemove(key, out _);
+            }
         }
         #endregion
 

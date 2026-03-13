@@ -5,6 +5,7 @@ using mRemoteNG.App;
 using mRemoteNG.Connection.Protocol;
 using mRemoteNG.Container;
 using mRemoteNG.Messages;
+using mRemoteNG.Messages.MessageWriters;
 using mRemoteNG.Properties;
 using mRemoteNG.UI.Forms;
 using mRemoteNG.UI.Panels;
@@ -13,6 +14,7 @@ using mRemoteNG.UI.Window;
 using WeifenLuo.WinFormsUI.Docking;
 using mRemoteNG.Resources.Language;
 using System.Runtime.Versioning;
+using System.Text;
 
 namespace mRemoteNG.Connection
 {
@@ -389,12 +391,16 @@ namespace mRemoteNG.Connection
                 {
                     strHostname += " via SSH Tunnel " + prot.InterfaceControl.SSHTunnelInfo.Name;
                 }
-                Runtime.MessageCollector.AddMessage(msgClass,
-                                                    string.Format(
-                                                                  Language.ProtocolEventDisconnected,
-                                                                  disconnectedMessage,
-                                                                  strHostname,
-                                                                  prot.InterfaceControl.Info.Protocol.ToString()));
+                string messageText =
+                    string.Format(
+                        Language.ProtocolEventDisconnected,
+                        disconnectedMessage,
+                        strHostname,
+                        prot.InterfaceControl.Info.Protocol.ToString()) +
+                    Environment.NewLine +
+                    BuildConnectionNotificationDetails(prot.InterfaceControl);
+
+                PublishNotificationMessage(msgClass, messageText);
             }
             catch (Exception ex)
             {
@@ -407,7 +413,14 @@ namespace mRemoteNG.Connection
             try
             {
                 ProtocolBase prot = (ProtocolBase)sender;
-                Runtime.MessageCollector.AddMessage(MessageClass.InformationMsg, Language.ConnenctionCloseEvent, true);
+                bool suppressNotifications = prot.InterfaceControl.SuppressCloseNotifications;
+                prot.InterfaceControl.SuppressCloseNotifications = false;
+
+                if (!suppressNotifications)
+                {
+                    PublishNotificationMessage(MessageClass.InformationMsg, Language.ConnenctionCloseEvent);
+                }
+
                 string connDetail;
                 if (prot.InterfaceControl.OriginalInfo.Hostname == "" && prot.InterfaceControl.Info.Protocol == ProtocolType.IntApp)
                     connDetail = prot.InterfaceControl.Info.ExtApp;
@@ -416,12 +429,20 @@ namespace mRemoteNG.Connection
                 else
                     connDetail = "UNKNOWN";
 
-                Runtime.MessageCollector.AddMessage(MessageClass.InformationMsg, string.Format(Language.ConnenctionClosedByUser, connDetail, prot.InterfaceControl.Info.Protocol, Environment.UserName));
+                if (!suppressNotifications)
+                {
+                    string messageText =
+                        string.Format(Language.ConnenctionClosedByUser, connDetail, prot.InterfaceControl.Info.Protocol, Environment.UserName) +
+                        Environment.NewLine +
+                        BuildConnectionNotificationDetails(prot.InterfaceControl);
+                    PublishNotificationMessage(MessageClass.InformationMsg, messageText);
+                }
+
                 prot.InterfaceControl.OriginalInfo.OpenConnections.Remove(prot);
                 if (_activeConnections.Contains(prot.InterfaceControl.Info.ConstantID))
                     _activeConnections.Remove(prot.InterfaceControl.Info.ConstantID);
 
-                if (prot.InterfaceControl.Info.PostExtApp == "") return;
+                if (suppressNotifications || prot.InterfaceControl.Info.PostExtApp == "") return;
                 Tools.ExternalTool extA = Runtime.ExternalToolsService.GetExtAppByName(prot.InterfaceControl.Info.PostExtApp);
                 extA?.Start(prot.InterfaceControl.OriginalInfo);
             }
@@ -434,14 +455,17 @@ namespace mRemoteNG.Connection
         private static void Prot_Event_Connected(object sender)
         {
             ProtocolBase prot = (ProtocolBase)sender;
-            Runtime.MessageCollector.AddMessage(MessageClass.InformationMsg, Language.ConnectionEventConnected,
-                                                true);
-            Runtime.MessageCollector.AddMessage(MessageClass.InformationMsg,
-                                                string.Format(Language.ConnectionEventConnectedDetail,
-                                                              prot.InterfaceControl.OriginalInfo.Hostname,
-                                                              prot.InterfaceControl.Info.Protocol, Environment.UserName,
-                                                              prot.InterfaceControl.Info.Description,
-                                                              prot.InterfaceControl.Info.UserField));
+            PublishNotificationMessage(MessageClass.InformationMsg, Language.ConnectionEventConnected);
+
+            string messageText =
+                string.Format(Language.ConnectionEventConnectedDetail,
+                              prot.InterfaceControl.OriginalInfo.Hostname,
+                              prot.InterfaceControl.Info.Protocol, Environment.UserName,
+                              prot.InterfaceControl.Info.Description,
+                              prot.InterfaceControl.Info.UserField) +
+                Environment.NewLine +
+                BuildConnectionNotificationDetails(prot.InterfaceControl);
+            PublishNotificationMessage(MessageClass.InformationMsg, messageText);
         }
 
         private static void Prot_Event_ErrorOccured(object sender, string errorMessage, int? errorCode)
@@ -461,6 +485,63 @@ namespace mRemoteNG.Connection
             {
                 Runtime.MessageCollector.AddExceptionStackTrace(Language.ConnectionFailed, ex);
             }
+        }
+
+        private static string BuildConnectionNotificationDetails(InterfaceControl interfaceControl)
+        {
+            ConnectionInfo info = interfaceControl?.OriginalInfo ?? interfaceControl?.Info;
+            if (info == null)
+            {
+                return "Server: -; Login: -; Gateway: -";
+            }
+
+            string login = BuildLoginDisplay(info);
+            string gateway = string.IsNullOrWhiteSpace(info.RDGatewayHostname) ? "-" : info.RDGatewayHostname;
+
+            StringBuilder builder = new();
+            builder.Append("Server: ");
+            builder.Append(string.IsNullOrWhiteSpace(info.Hostname) ? "-" : info.Hostname);
+            builder.Append("; Login: ");
+            builder.Append(login);
+            builder.Append("; Gateway: ");
+            builder.Append(gateway);
+
+            if (interfaceControl?.SSHTunnelInfo != null)
+            {
+                builder.Append("; SSH Tunnel: ");
+                builder.Append(interfaceControl.SSHTunnelInfo.Name);
+            }
+
+            return builder.ToString();
+        }
+
+        private static void PublishNotificationMessage(MessageClass messageClass, string messageText)
+        {
+            Runtime.MessageCollector.AddMessage(messageClass, messageText, onlyLog: true);
+            new NotificationPanelMessageWriter(AppWindows.ErrorsForm).Write(new Message(messageClass, messageText));
+        }
+
+        private static string BuildLoginDisplay(ConnectionInfo info)
+        {
+            bool hasDomain = !string.IsNullOrWhiteSpace(info.Domain);
+            bool hasUsername = !string.IsNullOrWhiteSpace(info.Username);
+
+            if (hasDomain && hasUsername)
+            {
+                return $"{info.Domain}\\{info.Username}";
+            }
+
+            if (hasUsername)
+            {
+                return info.Username;
+            }
+
+            if (hasDomain)
+            {
+                return info.Domain;
+            }
+
+            return "-";
         }
 
         #endregion

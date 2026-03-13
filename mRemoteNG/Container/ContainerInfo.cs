@@ -283,6 +283,49 @@ namespace mRemoteNG.Container
             }
         }
 
+        public void ApplyInheritancePropertyToChildren(string propertyName)
+        {
+            System.Reflection.PropertyInfo inheritanceProperty =
+                typeof(ConnectionInfoInheritance).GetProperty(propertyName);
+
+            if (inheritanceProperty == null || inheritanceProperty.PropertyType != typeof(bool))
+                return;
+
+            object currentValue = inheritanceProperty.GetValue(Inheritance);
+            foreach (ConnectionInfo child in GetRecursiveChildList())
+            {
+                inheritanceProperty.SetValue(child.Inheritance, currentValue);
+            }
+        }
+
+        public void ApplyInheritancePropertiesMatchingValueToChildren(bool value)
+        {
+            IEnumerable<System.Reflection.PropertyInfo> inheritanceProperties =
+                typeof(ConnectionInfoInheritance)
+                    .GetProperties()
+                    .Where(property => property.PropertyType == typeof(bool) && property.CanWrite);
+
+            foreach (ConnectionInfo child in GetRecursiveChildList())
+            {
+                foreach (System.Reflection.PropertyInfo inheritanceProperty in inheritanceProperties)
+                {
+                    object currentValue = inheritanceProperty.GetValue(Inheritance);
+                    if (currentValue is bool boolValue && boolValue == value)
+                        inheritanceProperty.SetValue(child.Inheritance, value);
+                }
+            }
+        }
+
+        public void ApplyDefaultInheritanceToSubtree()
+        {
+            DefaultConnectionInheritance.Instance.SaveTo(Inheritance);
+
+            foreach (ConnectionInfo child in GetRecursiveChildList())
+            {
+                DefaultConnectionInheritance.Instance.SaveTo(child.Inheritance);
+            }
+        }
+
         private IEnumerable<ConnectionInfo> GetRecursiveFavoritChildList(ContainerInfo container)
         {
             List<ConnectionInfo> childList = new();

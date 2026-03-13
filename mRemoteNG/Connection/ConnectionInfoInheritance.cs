@@ -134,6 +134,13 @@ namespace mRemoteNG.Connection
         [Browsable(true)]
         public bool OpeningCommand { get; set; }
 
+        [LocalizedAttributes.LocalizedCategory(nameof(Language.Connection), 3),
+         LocalizedAttributes.LocalizedDisplayNameInherit(nameof(Language.ExternalAddressProvider)),
+         LocalizedAttributes.LocalizedDescriptionInherit(nameof(Language.PropertyDescriptionExternalAddressProvider)),
+         TypeConverter(typeof(MiscTools.YesNoTypeConverter))]
+        [Browsable(true)]
+        public bool ExternalAddressProvider { get; set; }
+
         
 
         #endregion
@@ -287,6 +294,12 @@ namespace mRemoteNG.Connection
          LocalizedAttributes.LocalizedDescriptionInherit(nameof(Language.PropertyDescriptionUserViaAPI)),
          TypeConverter(typeof(MiscTools.YesNoTypeConverter))]
         public bool RDGatewayUserViaAPI { get; set; }
+
+        [LocalizedAttributes.LocalizedCategory(nameof(Language.RDPGateway), 5),
+         LocalizedAttributes.LocalizedDisplayNameInherit(nameof(Language.RdpGatewayAccessToken)),
+         LocalizedAttributes.LocalizedDescriptionInherit(nameof(Language.PropertyDescriptionRdpGatewayAccessToken)),
+         TypeConverter(typeof(MiscTools.YesNoTypeConverter))]
+        public bool RDGatewayAccessToken { get; set; }
 
 
         #endregion
@@ -462,6 +475,18 @@ namespace mRemoteNG.Connection
          LocalizedAttributes.LocalizedDescriptionInherit(nameof(Language.PropertyDescriptionEnvironmentTags)),
          TypeConverter(typeof(MiscTools.YesNoTypeConverter))]
         public bool EnvironmentTags { get; set; }
+
+        [LocalizedAttributes.LocalizedCategory(nameof(Language.Miscellaneous), 8),
+         LocalizedAttributes.LocalizedDisplayNameInherit(nameof(Language.RDPStartProgram)),
+         LocalizedAttributes.LocalizedDescriptionInherit(nameof(Language.PropertyDescriptionRDPStartProgram)),
+         TypeConverter(typeof(MiscTools.YesNoTypeConverter))]
+        public bool RDPStartProgram { get; set; }
+
+        [LocalizedAttributes.LocalizedCategory(nameof(Language.Miscellaneous), 8),
+         LocalizedAttributes.LocalizedDisplayNameInherit(nameof(Language.RDPStartProgramWorkDir)),
+         LocalizedAttributes.LocalizedDescriptionInherit(nameof(Language.PropertyDescriptionRDPStartProgramWorkDir)),
+         TypeConverter(typeof(MiscTools.YesNoTypeConverter))]
+        public bool RDPStartProgramWorkDir { get; set; }
 
         [LocalizedAttributes.LocalizedCategory(nameof(Language.Miscellaneous), 8),
         LocalizedAttributes.LocalizedDisplayNameInherit(nameof(Language.Favorite)),

@@ -214,7 +214,9 @@ namespace mRemoteNG.Tools
         {
             public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
             {
-                return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+                return sourceType == typeof(string) ||
+                       sourceType == typeof(bool) ||
+                       base.CanConvertFrom(context, sourceType);
             }
             public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
             {
@@ -223,6 +225,11 @@ namespace mRemoteNG.Tools
 
             public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object? value)
             {
+                if (value is bool boolValue)
+                {
+                    return boolValue;
+                }
+
                 if (value is not string stringValue)
                 {
                     // Ensure 'value' is not null before passing it to the base method
@@ -231,17 +238,29 @@ namespace mRemoteNG.Tools
                         : throw new ArgumentNullException(nameof(value), "Value cannot be null.");
                 }
 
-                if (string.Equals(stringValue, Language.Yes, StringComparison.CurrentCultureIgnoreCase))
+                stringValue = stringValue.Trim();
+
+                if (string.Equals(stringValue, Language.Yes, StringComparison.CurrentCultureIgnoreCase) ||
+                    string.Equals(stringValue, "Yes", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(stringValue, "1", StringComparison.Ordinal))
                 {
                     return true;
                 }
 
-                if (string.Equals(stringValue, Language.No, StringComparison.CurrentCultureIgnoreCase))
+                if (string.Equals(stringValue, Language.No, StringComparison.CurrentCultureIgnoreCase) ||
+                    string.Equals(stringValue, "No", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(stringValue, "0", StringComparison.Ordinal))
                 {
                     return false;
                 }
 
-                throw new Exception("Values must be \"Yes\" or \"No\"");
+                if (bool.TryParse(stringValue, out bool parsedBool))
+                {
+                    return parsedBool;
+                }
+
+                throw new NotSupportedException(
+                    $"Values must be \"{Language.Yes}\" or \"{Language.No}\".");
             }
 
             public override object ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type destinationType)
@@ -266,6 +285,11 @@ namespace mRemoteNG.Tools
                 StandardValuesCollection svc = new(bools);
 
                 return svc;
+            }
+
+            public override bool GetStandardValuesExclusive(ITypeDescriptorContext? context)
+            {
+                return true;
             }
         }
 

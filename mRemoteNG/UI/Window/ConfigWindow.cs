@@ -36,6 +36,9 @@ namespace mRemoteNG.UI.Window
         internal ContextMenuStrip PropertyGridContextMenu;
         private ToolStripMenuItem _propertyGridContextMenuShowHelpText;
         private ToolStripMenuItem _propertyGridContextMenuReset;
+        private ToolStripMenuItem _propertyGridContextMenuApplyInheritancePropertyToChildren;
+        private ToolStripMenuItem _propertyGridContextMenuApplyAllInheritancePropertiesToYes;
+        private ToolStripMenuItem _propertyGridContextMenuApplyAllInheritancePropertiesToNo;
         private ToolStripSeparator _toolStripSeparator1;
         private ConnectionInfoPropertyGrid _pGrid;
         private ThemeManager _themeManager;
@@ -65,6 +68,15 @@ namespace mRemoteNG.UI.Window
             PropertyGridContextMenu.Opening += PropertyGridContextMenu_Opening;
             _propertyGridContextMenuReset = new ToolStripMenuItem();
             _propertyGridContextMenuReset.Click += PropertyGridContextMenuReset_Click;
+            _propertyGridContextMenuApplyInheritancePropertyToChildren = new ToolStripMenuItem();
+            _propertyGridContextMenuApplyInheritancePropertyToChildren.Click +=
+                PropertyGridContextMenuApplyInheritancePropertyToChildren_Click;
+            _propertyGridContextMenuApplyAllInheritancePropertiesToYes = new ToolStripMenuItem();
+            _propertyGridContextMenuApplyAllInheritancePropertiesToYes.Click +=
+                PropertyGridContextMenuApplyAllInheritancePropertiesToYes_Click;
+            _propertyGridContextMenuApplyAllInheritancePropertiesToNo = new ToolStripMenuItem();
+            _propertyGridContextMenuApplyAllInheritancePropertiesToNo.Click +=
+                PropertyGridContextMenuApplyAllInheritancePropertiesToNo_Click;
             _toolStripSeparator1 = new ToolStripSeparator();
             _propertyGridContextMenuShowHelpText = new ToolStripMenuItem();
             _propertyGridContextMenuShowHelpText.Click += PropertyGridContextMenuShowHelpText_Click;
@@ -106,26 +118,55 @@ namespace mRemoteNG.UI.Window
             //
             PropertyGridContextMenu.Items.AddRange(new ToolStripItem[]
             {
-                _propertyGridContextMenuReset, _toolStripSeparator1, _propertyGridContextMenuShowHelpText
+                _propertyGridContextMenuReset,
+                _propertyGridContextMenuApplyInheritancePropertyToChildren,
+                _propertyGridContextMenuApplyAllInheritancePropertiesToYes,
+                _propertyGridContextMenuApplyAllInheritancePropertiesToNo,
+                _toolStripSeparator1,
+                _propertyGridContextMenuShowHelpText
             });
             PropertyGridContextMenu.Name = "PropertyGridContextMenu";
-            PropertyGridContextMenu.Size = new Size(157, 76);
+            PropertyGridContextMenu.Size = new Size(260, 142);
             //
             //propertyGridContextMenuReset
             //
             _propertyGridContextMenuReset.Name = "_propertyGridContextMenuReset";
-            _propertyGridContextMenuReset.Size = new Size(156, 22);
+            _propertyGridContextMenuReset.Size = new Size(259, 22);
             _propertyGridContextMenuReset.Text = @"&Reset";
+            //
+            // propertyGridContextMenuApplyInheritancePropertyToChildren
+            //
+            _propertyGridContextMenuApplyInheritancePropertyToChildren.Name =
+                "_propertyGridContextMenuApplyInheritancePropertyToChildren";
+            _propertyGridContextMenuApplyInheritancePropertyToChildren.Size = new Size(259, 22);
+            _propertyGridContextMenuApplyInheritancePropertyToChildren.Text =
+                "Apply this inheritance setting to children";
+            //
+            // propertyGridContextMenuApplyAllInheritancePropertiesToYes
+            //
+            _propertyGridContextMenuApplyAllInheritancePropertiesToYes.Name =
+                "_propertyGridContextMenuApplyAllInheritancePropertiesToYes";
+            _propertyGridContextMenuApplyAllInheritancePropertiesToYes.Size = new Size(259, 22);
+            _propertyGridContextMenuApplyAllInheritancePropertiesToYes.Text =
+                "Deploy inheritance properties set to Yes";
+            //
+            // propertyGridContextMenuApplyAllInheritancePropertiesToNo
+            //
+            _propertyGridContextMenuApplyAllInheritancePropertiesToNo.Name =
+                "_propertyGridContextMenuApplyAllInheritancePropertiesToNo";
+            _propertyGridContextMenuApplyAllInheritancePropertiesToNo.Size = new Size(259, 22);
+            _propertyGridContextMenuApplyAllInheritancePropertiesToNo.Text =
+                "Deploy inheritance properties set to No";
             //
             //ToolStripSeparator1
             //
             _toolStripSeparator1.Name = "_toolStripSeparator1";
-            _toolStripSeparator1.Size = new Size(153, 6);
+            _toolStripSeparator1.Size = new Size(256, 6);
             //
             //propertyGridContextMenuShowHelpText
             //
             _propertyGridContextMenuShowHelpText.Name = "_propertyGridContextMenuShowHelpText";
-            _propertyGridContextMenuShowHelpText.Size = new Size(156, 22);
+            _propertyGridContextMenuShowHelpText.Size = new Size(259, 22);
             _propertyGridContextMenuShowHelpText.Text = @"&Show Help Text";
             //
             //btnShowInheritance
@@ -303,6 +344,12 @@ namespace mRemoteNG.UI.Window
             Text = Language.Config;
             TabText = Language.Config;
             _propertyGridContextMenuShowHelpText.Text = Language.ShowHelpText;
+            _propertyGridContextMenuApplyInheritancePropertyToChildren.Text =
+                "Apply this inheritance setting to children";
+            _propertyGridContextMenuApplyAllInheritancePropertiesToYes.Text =
+                "Deploy inheritance properties set to Yes";
+            _propertyGridContextMenuApplyAllInheritancePropertiesToNo.Text =
+                "Deploy inheritance properties set to No";
         }
 
         private new void ApplyTheme()
@@ -322,6 +369,7 @@ namespace mRemoteNG.UI.Window
                 _themeManager.ActiveTheme.ExtendedPalette.getColor("List_Item_Disabled_Background");
             _pGrid.CommandsForeColor =
                 _themeManager.ActiveTheme.ExtendedPalette.getColor("List_Item_Disabled_Foreground");
+
         }
 
         private void UpdateTopRow()
@@ -681,10 +729,87 @@ namespace mRemoteNG.UI.Window
                 _propertyGridContextMenuReset.Enabled = Convert.ToBoolean(_pGrid.SelectedObject != null &&
                                                                           gridItem?.PropertyDescriptor != null &&
                                                                           gridItem.PropertyDescriptor.CanResetValue(_pGrid.SelectedObject));
+                _propertyGridContextMenuApplyInheritancePropertyToChildren.Enabled =
+                    CanApplySelectedInheritancePropertyToChildren(gridItem);
+                bool canApplyAllInheritanceProperties = CanApplyAllInheritancePropertiesToSubtree();
+                _propertyGridContextMenuApplyAllInheritancePropertiesToYes.Enabled =
+                    canApplyAllInheritanceProperties;
+                _propertyGridContextMenuApplyAllInheritancePropertiesToNo.Enabled =
+                    canApplyAllInheritanceProperties;
             }
             catch (Exception ex)
             {
                 Runtime.MessageCollector.AddExceptionMessage("UI.Window.Config.propertyGridContextMenu_Opening() failed.", ex);
+            }
+        }
+
+        private bool CanApplySelectedInheritancePropertyToChildren(GridItem gridItem)
+        {
+            if (_pGrid.PropertyMode != PropertyMode.Inheritance)
+                return false;
+
+            if (_pGrid.SelectedConnectionInfo is not ContainerInfo)
+                return false;
+
+            string propertyName = gridItem?.PropertyDescriptor?.Name;
+            if (string.IsNullOrEmpty(propertyName))
+                return false;
+
+            var propertyInfo = typeof(ConnectionInfoInheritance).GetProperty(propertyName);
+            return propertyInfo != null && propertyInfo.PropertyType == typeof(bool);
+        }
+
+        private bool CanApplyAllInheritancePropertiesToSubtree()
+        {
+            return _pGrid.PropertyMode == PropertyMode.Inheritance &&
+                   _pGrid.SelectedConnectionInfo is ContainerInfo;
+        }
+
+        private void PropertyGridContextMenuApplyInheritancePropertyToChildren_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                GridItem gridItem = _pGrid.SelectedGridItem;
+                if (!CanApplySelectedInheritancePropertyToChildren(gridItem))
+                    return;
+
+                ((ContainerInfo)_pGrid.SelectedConnectionInfo)
+                    .ApplyInheritancePropertyToChildren(gridItem.PropertyDescriptor.Name);
+                Runtime.ConnectionsService.SaveConnectionsAsync();
+            }
+            catch (Exception ex)
+            {
+                Runtime.MessageCollector.AddExceptionMessage(
+                    "UI.Window.Config.propertyGridContextMenuApplyInheritancePropertyToChildren_Click() failed.", ex);
+            }
+        }
+
+        private void PropertyGridContextMenuApplyAllInheritancePropertiesToYes_Click(object sender, EventArgs e)
+        {
+            ApplyInheritancePropertiesMatchingValueToSubtree(true);
+        }
+
+        private void PropertyGridContextMenuApplyAllInheritancePropertiesToNo_Click(object sender, EventArgs e)
+        {
+            ApplyInheritancePropertiesMatchingValueToSubtree(false);
+        }
+
+        private void ApplyInheritancePropertiesMatchingValueToSubtree(bool value)
+        {
+            try
+            {
+                if (!CanApplyAllInheritancePropertiesToSubtree())
+                    return;
+
+                ((ContainerInfo)_pGrid.SelectedConnectionInfo)
+                    .ApplyInheritancePropertiesMatchingValueToChildren(value);
+                Runtime.ConnectionsService.SaveConnectionsAsync();
+                _pGrid.Refresh();
+            }
+            catch (Exception ex)
+            {
+                Runtime.MessageCollector.AddExceptionMessage(
+                    "UI.Window.Config.ApplyInheritancePropertiesMatchingValueToSubtree() failed.", ex);
             }
         }
 
