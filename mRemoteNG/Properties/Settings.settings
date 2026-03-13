@@ -296,6 +296,9 @@
     <Setting Name="InhDefaultRDGatewayUseConnectionCredentials" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="InhDefaultRDGatewayAccessToken" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="RdpReconnectionCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">5</Value>
     </Setting>
@@ -567,6 +570,12 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="InhDefaultOpeningCommand" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="InhDefaultRDPStartProgram" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="InhDefaultRDPStartProgramWorkDir" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="ConDefaultExternalCredentialProvider" Type="System.String" Scope="User">

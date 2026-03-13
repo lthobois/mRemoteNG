@@ -1213,6 +1213,18 @@ namespace mRemoteNG.Properties {
                 this["InhDefaultRDGatewayUseConnectionCredentials"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool InhDefaultRDGatewayAccessToken {
+            get {
+                return ((bool)(this["InhDefaultRDGatewayAccessToken"]));
+            }
+            set {
+                this["InhDefaultRDGatewayAccessToken"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -2306,6 +2318,30 @@ namespace mRemoteNG.Properties {
             }
             set {
                 this["InhDefaultOpeningCommand"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool InhDefaultRDPStartProgram {
+            get {
+                return ((bool)(this["InhDefaultRDPStartProgram"]));
+            }
+            set {
+                this["InhDefaultRDPStartProgram"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool InhDefaultRDPStartProgramWorkDir {
+            get {
+                return ((bool)(this["InhDefaultRDPStartProgramWorkDir"]));
+            }
+            set {
+                this["InhDefaultRDPStartProgramWorkDir"] = value;
             }
         }
         

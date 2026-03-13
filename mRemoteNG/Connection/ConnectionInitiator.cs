@@ -400,7 +400,7 @@ namespace mRemoteNG.Connection
                     Environment.NewLine +
                     BuildConnectionNotificationDetails(prot.InterfaceControl);
 
-                PublishNotificationMessage(msgClass, messageText);
+                PublishNotificationMessage(msgClass, messageText, prot.InterfaceControl);
             }
             catch (Exception ex)
             {
@@ -418,7 +418,7 @@ namespace mRemoteNG.Connection
 
                 if (!suppressNotifications)
                 {
-                    PublishNotificationMessage(MessageClass.InformationMsg, Language.ConnenctionCloseEvent);
+                    PublishNotificationMessage(MessageClass.InformationMsg, Language.ConnenctionCloseEvent, prot.InterfaceControl);
                 }
 
                 string connDetail;
@@ -435,7 +435,7 @@ namespace mRemoteNG.Connection
                         string.Format(Language.ConnenctionClosedByUser, connDetail, prot.InterfaceControl.Info.Protocol, Environment.UserName) +
                         Environment.NewLine +
                         BuildConnectionNotificationDetails(prot.InterfaceControl);
-                    PublishNotificationMessage(MessageClass.InformationMsg, messageText);
+                    PublishNotificationMessage(MessageClass.InformationMsg, messageText, prot.InterfaceControl);
                 }
 
                 prot.InterfaceControl.OriginalInfo.OpenConnections.Remove(prot);
@@ -455,7 +455,7 @@ namespace mRemoteNG.Connection
         private static void Prot_Event_Connected(object sender)
         {
             ProtocolBase prot = (ProtocolBase)sender;
-            PublishNotificationMessage(MessageClass.InformationMsg, Language.ConnectionEventConnected);
+            PublishNotificationMessage(MessageClass.InformationMsg, Language.ConnectionEventConnected, prot.InterfaceControl);
 
             string messageText =
                 string.Format(Language.ConnectionEventConnectedDetail,
@@ -465,7 +465,7 @@ namespace mRemoteNG.Connection
                               prot.InterfaceControl.Info.UserField) +
                 Environment.NewLine +
                 BuildConnectionNotificationDetails(prot.InterfaceControl);
-            PublishNotificationMessage(MessageClass.InformationMsg, messageText);
+            PublishNotificationMessage(MessageClass.InformationMsg, messageText, prot.InterfaceControl);
         }
 
         private static void Prot_Event_ErrorOccured(object sender, string errorMessage, int? errorCode)
@@ -515,10 +515,19 @@ namespace mRemoteNG.Connection
             return builder.ToString();
         }
 
-        private static void PublishNotificationMessage(MessageClass messageClass, string messageText)
+        private static string BuildNotificationPrefix(InterfaceControl interfaceControl)
         {
-            Runtime.MessageCollector.AddMessage(messageClass, messageText, onlyLog: true);
-            new NotificationPanelMessageWriter(AppWindows.ErrorsForm).Write(new Message(messageClass, messageText));
+            ConnectionInfo info = interfaceControl?.OriginalInfo ?? interfaceControl?.Info;
+            string serverName = string.IsNullOrWhiteSpace(info?.Hostname) ? "-" : info.Hostname;
+            return $"[{DateTime.Now:yyyy-MM-dd hh:mm} \\ {serverName}] ";
+        }
+
+        private static void PublishNotificationMessage(MessageClass messageClass, string messageText, InterfaceControl interfaceControl = null)
+        {
+            string formattedMessage = BuildNotificationPrefix(interfaceControl) + messageText;
+            Runtime.MessageCollector.AddMessage(messageClass, formattedMessage, onlyLog: true);
+            new NotificationPanelMessageWriter(AppWindows.ErrorsForm)
+                .Write(new mRemoteNG.Messages.Message(messageClass, formattedMessage));
         }
 
         private static string BuildLoginDisplay(ConnectionInfo info)

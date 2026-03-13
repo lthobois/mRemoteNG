@@ -49,7 +49,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
         protected readonly uint DeviceScaleFactor = 100;
         protected readonly uint Orientation = 0;
         private AxHost AxHost => (AxHost)Control;
-        private const int RapidDisconnectRetryWindowMs = 500;
+        private const int RapidDisconnectRetryWindowMs = 2000;
         private const int MaxRapidDisconnectRetries = 5;
         private static readonly ConcurrentDictionary<string, int> RapidDisconnectRetryCounts = new();
 
