@@ -1,0 +1,110 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "restore",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "restore",
+        "mRemoteNG.sln"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build-debug-x64",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Tools\\invoke_msbuild.ps1",
+        "-Solution",
+        "mRemoteNG.sln",
+        "-Configuration",
+        "Debug",
+        "-Platform",
+        "x64"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "restore",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-release-x64",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Tools\\invoke_msbuild.ps1",
+        "-Solution",
+        "mRemoteNG.sln",
+        "-Configuration",
+        "Release",
+        "-Platform",
+        "x64"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "restore",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-release-arm64",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Tools\\invoke_msbuild.ps1",
+        "-Solution",
+        "mRemoteNG.sln",
+        "-Configuration",
+        "Release",
+        "-Platform",
+        "arm64"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "restore",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-release-portable-x64",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Tools\\invoke_msbuild.ps1",
+        "-Solution",
+        "mRemoteNG.sln",
+        "-Configuration",
+        "Release Portable",
+        "-Platform",
+        "x64"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "restore",
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

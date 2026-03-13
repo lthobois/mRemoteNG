@@ -39,6 +39,9 @@ namespace mRemoteNG.UI.Controls.ConnectionTree
 
         public ConnectionInfo SelectedNode => (ConnectionInfo)SelectedObject;
 
+        public IReadOnlyList<ConnectionInfo> SelectedNodes =>
+            SelectedObjects?.OfType<ConnectionInfo>().ToList() ?? [];
+
         public NodeSearcher NodeSearcher { get; private set; }
 
         public IConfirm<ConnectionInfo> NodeDeletionConfirmer { get; set; } = new AlwaysConfirmYes();
@@ -400,6 +403,24 @@ namespace mRemoteNG.UI.Controls.ConnectionTree
             AutoResizeColumn(Columns[0]);
         }
 
+        public IReadOnlyList<ConnectionInfo> GetNodesToOpen(ConnectionInfo clickedNode = null)
+        {
+            List<ConnectionInfo> selectedNodes = SelectedNodes.ToList();
+            IEnumerable<ConnectionInfo> candidateNodes;
+
+            if (selectedNodes.Count > 1 && clickedNode != null && selectedNodes.Contains(clickedNode))
+                candidateNodes = selectedNodes;
+            else if (clickedNode != null)
+                candidateNodes = [clickedNode];
+            else
+                candidateNodes = selectedNodes.Count > 0 ? selectedNodes : SelectedNode != null ? [SelectedNode] : [];
+
+            return ExpandConnectableNodes(candidateNodes)
+                .GroupBy(node => node.ConstantID)
+                .Select(group => group.First())
+                .ToList();
+        }
+
         /// <summary>
         /// Filters tree items based on the given <see cref="filterText"/>
         /// </summary>
@@ -418,6 +439,35 @@ namespace mRemoteNG.UI.Controls.ConnectionTree
         {
             UseFiltering = false;
             ResetColumnFiltering();
+        }
+
+        private static IEnumerable<ConnectionInfo> ExpandConnectableNodes(IEnumerable<ConnectionInfo> nodes)
+        {
+            foreach (ConnectionInfo node in nodes)
+            {
+                if (node == null)
+                    continue;
+
+                if (node is ContainerInfo containerInfo)
+                {
+                    foreach (ConnectionInfo child in containerInfo.GetRecursiveChildList()
+                                 .Where(IsConnectableNode))
+                    {
+                        yield return child;
+                    }
+
+                    continue;
+                }
+
+                if (IsConnectableNode(node))
+                    yield return node;
+            }
+        }
+
+        private static bool IsConnectableNode(ConnectionInfo node)
+        {
+            TreeNodeType treeNodeType = node.GetTreeNodeType();
+            return treeNodeType == TreeNodeType.Connection || treeNodeType == TreeNodeType.PuttySession;
         }
 
         private void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs args)

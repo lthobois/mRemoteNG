@@ -158,9 +158,9 @@ namespace mRemoteNG.UI.Window
             };
 
             if (Settings.Default.SingleClickOnConnectionOpensIt)
-                singleClickHandlers.Add(new OpenConnectionClickHandler(Runtime.ConnectionInitiator));
+                singleClickHandlers.Add(new OpenConnectionClickHandler(Runtime.ConnectionInitiator, ConnectionTree.GetNodesToOpen));
             else
-                doubleClickHandlers.Add(new OpenConnectionClickHandler(Runtime.ConnectionInitiator));
+                doubleClickHandlers.Add(new OpenConnectionClickHandler(Runtime.ConnectionInitiator, ConnectionTree.GetNodesToOpen));
 
             if (Settings.Default.SingleClickSwitchesToOpenConnection)
                 singleClickHandlers.Add(new SwitchToConnectionClickHandler(Runtime.ConnectionInitiator));
@@ -300,22 +300,15 @@ namespace mRemoteNG.UI.Window
 
         private void ApplyFiltering()
         {
-            if (Settings.Default.UseFilterSearch)
+            if (txtSearch.Text == "" || txtSearch.Text == Language.SearchPrompt)
             {
-                if (txtSearch.Text == "" || txtSearch.Text == Language.SearchPrompt)
-                {
-                    ConnectionTree.RemoveFilter();
-                    return;
-                }
+                ConnectionTree.RemoveFilter();
+                return;
+            }
 
-                ConnectionTree.ApplyFilter(txtSearch.Text);
-            }
-            else
-            {
-                if (txtSearch.Text == "") return;
-                ConnectionTree.NodeSearcher?.SearchByName(txtSearch.Text);
-                JumpToNode(ConnectionTree.NodeSearcher?.CurrentMatch);
-            }
+            ConnectionTree.ApplyFilter(txtSearch.Text);
+            ConnectionTree.NodeSearcher?.SearchByName(txtSearch.Text);
+            JumpToNode(ConnectionTree.NodeSearcher?.CurrentMatch);
         }
 
         public void JumpToNode(ConnectionInfo connectionInfo)
@@ -363,9 +356,7 @@ namespace mRemoteNG.UI.Window
                 if (e.KeyCode == Keys.Enter)
                 {
                     e.Handled = true;
-                    if (SelectedNode == null)
-                        return;
-                    Runtime.ConnectionInitiator.OpenConnection(SelectedNode);
+                    OpenSelectedConnections();
                 }
                 else if (e.Control && e.KeyCode == Keys.F)
                 {
@@ -377,6 +368,14 @@ namespace mRemoteNG.UI.Window
             catch (Exception ex)
             {
                 Runtime.MessageCollector.AddExceptionStackTrace("tvConnections_KeyDown (UI.Window.ConnectionTreeWindow) failed", ex);
+            }
+        }
+
+        internal void OpenSelectedConnections(ConnectionInfo clickedNode = null, ConnectionInfo.Force force = ConnectionInfo.Force.None)
+        {
+            foreach (ConnectionInfo node in ConnectionTree.GetNodesToOpen(clickedNode))
+            {
+                Runtime.ConnectionInitiator.OpenConnection(node, force);
             }
         }
 

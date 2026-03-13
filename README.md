@@ -91,7 +91,37 @@ For a detailed feature list and general usage support, refer to the [Documentati
 #### Source package
 
 This contains the source code from which mRemoteNG is built.
-You will need to compile it yourself using Visual Studio.
+You can compile it with Visual Studio or Visual Studio Code on Windows.
+
+### Build from VS Code
+
+Prerequisites:
+
+* Windows 10/11
+* .NET 10 SDK
+* .NET 10 Desktop Runtime
+* Visual Studio 2022 or Build Tools 2022 with MSBuild
+
+VS Code uses the full `MSBuild.exe` from Visual Studio/Build Tools because this solution contains COM references that are not supported by `dotnet msbuild` alone.
+
+Open the repository root in VS Code, then run one of the workspace tasks from `Terminal > Run Task...`:
+
+* `build-debug-x64`
+* `build-release-x64`
+* `build-release-arm64`
+* `build-release-portable-x64`
+
+The tasks are defined in `.vscode/tasks.json` and automatically run `dotnet restore` before calling [`Tools/invoke_msbuild.ps1`](Tools/invoke_msbuild.ps1), which locates the full `MSBuild.exe` installation through `vswhere`.
+
+Equivalent commands:
+
+```powershell
+dotnet restore mRemoteNG.sln
+powershell -ExecutionPolicy Bypass -File .\Tools\invoke_msbuild.ps1 -Solution mRemoteNG.sln -Configuration Debug -Platform x64
+powershell -ExecutionPolicy Bypass -File .\Tools\invoke_msbuild.ps1 -Solution mRemoteNG.sln -Configuration Release -Platform x64
+powershell -ExecutionPolicy Bypass -File .\Tools\invoke_msbuild.ps1 -Solution mRemoteNG.sln -Configuration "Release Portable" -Platform x64
+powershell -ExecutionPolicy Bypass -File .\Tools\invoke_msbuild.ps1 -Solution mRemoteNG.sln -Configuration Release -Platform arm64
+```
 
 ### Minimum Requirements
 
