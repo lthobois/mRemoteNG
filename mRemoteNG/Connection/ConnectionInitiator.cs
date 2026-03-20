@@ -236,12 +236,18 @@ namespace mRemoteNG.Connection
 
                 if (newProtocol.Initialize() == false)
                 {
+                    Runtime.MessageCollector.AddMessage(
+                        MessageClass.WarningMsg,
+                        $"Protocol initialization failed for '{connectionInfoOriginal.Name}' ({connectionInfoOriginal.Protocol}) targeting '{connectionInfoOriginal.Hostname}'.");
                     newProtocol.Close();
                     return;
                 }
 
                 if (newProtocol.Connect() == false)
                 {
+                    Runtime.MessageCollector.AddMessage(
+                        MessageClass.WarningMsg,
+                        $"Protocol connect failed for '{connectionInfoOriginal.Name}' ({connectionInfoOriginal.Protocol}) targeting '{connectionInfoOriginal.Hostname}'.");
                     newProtocol.Close();
                     return;
                 }

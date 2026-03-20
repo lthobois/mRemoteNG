@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
+using mRemoteNG.App;
+using mRemoteNG.Messages;
 
 namespace mRemoteNG.Connection.Protocol.RDP
 {
@@ -40,12 +42,16 @@ namespace mRemoteNG.Connection.Protocol.RDP
 
             foreach (RdpVersion version in versions)
             {
+                Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"Probing RDP version support for {version}.");
                 RdpProtocol rdp = Build(version);
                 if (rdp.RdpVersionSupported())
+                {
+                    Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"Selected highest supported RDP version: {version}.");
                     return rdp;
+                }
             }
 
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(RdpVersion.Highest), "No supported RDP ActiveX version could be initialized.");
         }
 
         public List<RdpVersion> GetSupportedVersions()
@@ -58,7 +64,9 @@ namespace mRemoteNG.Connection.Protocol.RDP
             foreach (RdpVersion version in versions)
             {
                 if (Build(version).RdpVersionSupported())
+                {
                     supportedVersions.Add(version);
+                }
             }
 
             return supportedVersions;

@@ -14,6 +14,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
@@ -146,7 +147,19 @@ namespace mRemoteNG.Connection.Protocol.RDP
         {
             connectionInfo = InterfaceControl.Info;
             Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"Requesting RDP version: {connectionInfo.RdpVersion}. Using: {RdpProtocolVersion}");
-            Control = CreateActiveXRdpClientControl();
+            EnsureRdpInteropAssembliesLoaded();
+
+            try
+            {
+                Control = CreateActiveXRdpClientControl();
+            }
+            catch (Exception ex)
+            {
+                Runtime.MessageCollector.AddExceptionStackTrace("Failed to create RDP ActiveX host control.", ex);
+                LogRdpInteropAssemblyState();
+                return false;
+            }
+
             base.Initialize();
 
             try
@@ -154,8 +167,13 @@ namespace mRemoteNG.Connection.Protocol.RDP
                 if (!InitializeActiveXControl()) return false;
 
                 RdpVersion = new Version(_rdpClient.Version);
+                Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"Detected RDP client version: {RdpVersion}");
 
-                if (RdpVersion < Versions.RDC61) return false; // only RDP versions 6.1 and greater are supported; minimum dll version checked, MSTSCLIB is not capable 
+                if (RdpVersion < Versions.RDC61)
+                {
+                    Runtime.MessageCollector.AddMessage(MessageClass.WarningMsg, $"RDP client version {RdpVersion} is below the supported minimum {Versions.RDC61}.");
+                    return false; // only RDP versions 6.1 and greater are supported; minimum dll version checked, MSTSCLIB is not capable 
+                }
 
                 SetRdpClientProperties();
 
@@ -164,6 +182,7 @@ namespace mRemoteNG.Connection.Protocol.RDP
             catch (Exception ex)
             {
                 Runtime.MessageCollector.AddExceptionStackTrace(Language.RdpSetPropsFailed, ex);
+                LogRdpInteropAssemblyState();
                 return false;
             }
         }
@@ -203,6 +222,62 @@ namespace mRemoteNG.Connection.Protocol.RDP
                 Control.Dispose();
                 return false;
             }
+        }
+
+        private static void EnsureRdpInteropAssembliesLoaded()
+        {
+            EnsureAssemblyLoaded("MSTSCLib");
+            EnsureAssemblyLoaded("Interop.MSTSCLib");
+            EnsureAssemblyLoaded("AxInterop.MSTSCLib");
+        }
+
+        private static void EnsureAssemblyLoaded(string assemblyName)
+        {
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (string.Equals(assembly.GetName().Name, assemblyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
+            string assemblyFile = $"{assemblyName}.dll";
+            string[] candidatePaths =
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, assemblyFile),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assemblies", assemblyFile)
+            };
+
+            foreach (string candidatePath in candidatePaths)
+            {
+                if (!File.Exists(candidatePath))
+                {
+                    continue;
+                }
+
+                Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"Loading RDP interop assembly '{assemblyName}' from '{candidatePath}'.");
+                Assembly.LoadFrom(candidatePath);
+                return;
+            }
+
+            Runtime.MessageCollector.AddMessage(MessageClass.WarningMsg, $"RDP interop assembly '{assemblyName}' was not found in expected output folders.");
+        }
+
+        private static void LogRdpInteropAssemblyState()
+        {
+            LogAssemblyState("MSTSCLib.dll");
+            LogAssemblyState("Interop.MSTSCLib.dll");
+            LogAssemblyState("AxInterop.MSTSCLib.dll");
+        }
+
+        private static void LogAssemblyState(string assemblyFileName)
+        {
+            string basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, assemblyFileName);
+            string assembliesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assemblies", assemblyFileName);
+
+            Runtime.MessageCollector.AddMessage(
+                MessageClass.DebugMsg,
+                $"RDP assembly probe: base='{basePath}' exists={File.Exists(basePath)}; assemblies='{assembliesPath}' exists={File.Exists(assembliesPath)}");
         }
 
         public override bool Connect()
@@ -304,12 +379,16 @@ namespace mRemoteNG.Connection.Protocol.RDP
         {
             try
             {
+                EnsureRdpInteropAssembliesLoaded();
                 using AxHost control = CreateActiveXRdpClientControl();
                 control.CreateControl();
+                Runtime.MessageCollector.AddMessage(MessageClass.DebugMsg, $"RDP version probe succeeded for {GetType().Name}.");
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Runtime.MessageCollector.AddExceptionMessage($"RDP version probe failed for {GetType().Name}.", ex, MessageClass.WarningMsg, false);
+                LogRdpInteropAssemblyState();
                 return false;
             }
         }
